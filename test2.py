@@ -1,9 +1,10 @@
+#test2.py
+
 import streamlit as st
 import pandas as pd
 
 # 파일 업로드 위젯
 uploaded_file = st.file_uploader("파일 업로드", type=["csv", "xlsx"])
-
 if uploaded_file is not None:
     # 업로드된 파일을 DataFrame으로 읽기
     if uploaded_file.name.endswith('.csv'):
@@ -23,12 +24,12 @@ if uploaded_file is not None:
         df_selected.insert(0, "Select", False)
 
     # 새로운 데이터프레임 출력
-    edited_df = st.data_editor(df_selected, num_rows="dynamic", use_container_width=True)
+    edited_df = st.data_editor(df_selected, hide_index=True, use_container_width=True)
 
     # 선택된 행만 추출
     selected_rows = edited_df[edited_df["Select"]]
     st.write("선택된 키워드:")
-    st.write(selected_rows)
+    st.data_editor(selected_rows, hide_index=True, use_container_width=True)
 
     # 선택된 키워드
     selected_keyword = st.multiselect(
