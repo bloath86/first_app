@@ -22,7 +22,7 @@ if uploaded_file is not None:
     df['쇼핑탭'] = "https://search.shopping.naver.com/search/all?where=all&frm=NVSCTAB&query=" + df['키워드']
 
     # '총검색수'와 '상품수' 열의 값을 정수로 변경
-    df['총 검색수'] = pd.to_numeric(df['총 검색수'], errors='coerce').fillna(0).astype(int)
+    df['검색량'] = pd.to_numeric(df['검색량'], errors='coerce').fillna(0).astype(int)
     df['상품수'] = pd.to_numeric(df['상품수'], errors='coerce').fillna(0).astype(int)
 
 
@@ -33,7 +33,7 @@ if uploaded_file is not None:
         df,
         hide_index=True,
         #use_container_width=True,
-        column_order=("선택", "키워드", "총 검색수", "상품수", "경쟁강도", "쇼핑탭"),
+        column_order=("선택", "키워드", "검색량", "상품수", "경쟁률", "쇼핑탭"),
         column_config={
             "선택": st.column_config.CheckboxColumn(width="small"),
             "키워드": st.column_config.TextColumn(width="medium"),
@@ -49,7 +49,7 @@ if uploaded_file is not None:
         selected_data,
         hide_index=True,
         #use_container_width=True,
-        column_order=("키워드", "총 검색수", "상품수", "경쟁강도", "쇼핑탭","메모"),
+        column_order=("키워드", "검색량", "상품수", "경쟁률", "쇼핑탭","메모"),
         column_config={
             "키워드": st.column_config.TextColumn(width=""),
             "쇼핑탭": st.column_config.LinkColumn(display_text="쇼핑탭"),
