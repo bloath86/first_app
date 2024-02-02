@@ -3,8 +3,10 @@
 import streamlit as st
 import pandas as pd
 
+st.title("Keyword Mining ✨")
+
 ### 파일 업로드 위젯
-uploaded_file = st.file_uploader("파일 업로드", type=["csv", "xlsx"])
+uploaded_file = st.file_uploader("", type=["csv", "xlsx"])
 if uploaded_file is not None:
     # 업로드된 파일을 DataFrame으로 읽기
     if uploaded_file.name.endswith('.csv'):
@@ -42,7 +44,7 @@ if uploaded_file is not None:
 
     # 2번 데이터 프레임
     selected_data = edited_df[edited_df["선택"]]
-    st.write(f"선택된 키워드: {selected_data.shape[0]}")
+    st.caption(f"선택된 키워드: {selected_data.shape[0]}")
     st.data_editor(
         selected_data,
         hide_index=True,
@@ -58,13 +60,15 @@ if uploaded_file is not None:
 
     # 선택된 키워드
     selected_keyword = st.multiselect(
-        '키워드 선택',
+        '',
         selected_data['키워드'].tolist(),
         selected_data['키워드'].tolist())
 
     # 키워드 입력란
-    keyword_input = st.text_input("상품명")
+    keyword_input = st.text_input("")
 
     # 글자수 표시
     character_count = len(keyword_input)
-    st.text(f"상품명길이: {character_count}")
+    st.caption(f"상품명길이: {character_count}")
+
+
