@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 
-# 파일 업로드 위젯
+### 파일 업로드 위젯
 uploaded_file = st.file_uploader("파일 업로드", type=["csv", "xlsx"])
 if uploaded_file is not None:
     # 업로드된 파일을 DataFrame으로 읽기
@@ -12,24 +12,47 @@ if uploaded_file is not None:
     elif uploaded_file.name.endswith(('.xls', '.xlsx')):
         df = pd.read_excel(uploaded_file, engine='openpyxl')
 
-    # 선택한 열만 남기기
-    selected_columns = ["키워드", "총 검색수", "상품수", "경쟁강도"]
-    df_selected = df[selected_columns]
 
-    # 첫 번째 열에 체크박스 추가
-    checkbox_col = st.checkbox("Select All", key="select_all")
-    if checkbox_col:
-        df_selected.insert(0, "Select", True)
-    else:
-        df_selected.insert(0, "Select", False)
+    ### 초기 데이터 가공
+        
+    df['선택'] = False
+    df['네이버쇼핑'] = "https://search.shopping.naver.com/search/all?where=all&frm=NVSCTAB&query=" + df['키워드']
 
-    # 새로운 데이터프레임 출력
-    edited_df = st.data_editor(df_selected, hide_index=True, use_container_width=True)
+    # '총검색수'와 '상품수' 열의 값을 정수로 변경
+    df['총 검색수'] = pd.to_numeric(df['총 검색수'], errors='coerce').fillna(0).astype(int)
+    df['상품수'] = pd.to_numeric(df['상품수'], errors='coerce').fillna(0).astype(int)
+
+
+
+    ### 출력 및 컬럼 설정
+
+    edited_df = st.data_editor(
+        df,
+        hide_index=True,
+        #use_container_width=True,
+        column_order=("선택", "키워드", "총 검색수", "상품수", "경쟁강도", "네이버쇼핑"),
+        column_config={
+            "선택": st.column_config.CheckboxColumn(width="small"),
+            "키워드": st.column_config.TextColumn(width="medium"),
+            "네이버쇼핑": st.column_config.LinkColumn(display_text="네이버쇼핑"),
+            },  
+        )
+
 
     # 선택된 행만 추출
-    selected_rows = edited_df[edited_df["Select"]]
+    selected_rows = edited_df[edited_df["선택"]]
     st.write("선택된 키워드:")
-    st.data_editor(selected_rows, hide_index=True, use_container_width=True)
+    st.data_editor(
+        selected_rows,
+        hide_index=True,
+        #use_container_width=True,
+        column_order=("키워드", "총 검색수", "상품수", "경쟁강도", "네이버쇼핑"),
+        column_config={
+            "키워드": st.column_config.TextColumn(width="medium"),
+            "네이버쇼핑": st.column_config.LinkColumn(display_text="네이버쇼핑"),
+            },  
+        )
+
 
     # 선택된 키워드
     selected_keyword = st.multiselect(
