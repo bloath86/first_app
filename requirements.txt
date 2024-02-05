@@ -2,4 +2,4 @@ openpyxl
 pandas
 numpy
 altair
-msoffcrypto
+msoffcrypto-tool
