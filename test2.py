@@ -1,74 +1,104 @@
-#test2.py
-
-import streamlit as st
+import os
+import glob
+import unicodedata
+import msoffcrypto
+import io
 import pandas as pd
 
-st.title("Keyword Mining ✨")
+def normalize_filename(filename):
+    """
+    파일명을 NFC 형태로 정규화합니다.
+    """
+    return unicodedata.normalize('NFC', filename)
 
-### 파일 업로드 위젯
-uploaded_file = st.file_uploader("", type=["csv", "xlsx"])
-if uploaded_file is not None:
-    # 업로드된 파일을 DataFrame으로 읽기
-    if uploaded_file.name.endswith('.csv'):
-        df = pd.read_csv(uploaded_file)
-    elif uploaded_file.name.endswith(('.xls', '.xlsx')):
-        df = pd.read_excel(uploaded_file, engine='openpyxl')
+def get_latest_excel_info(folder_path, file_pattern):
+    """
+    지정된 폴더에서 특정 파일 패턴을 갖는 가장 최근의 엑셀 파일 정보를 반환합니다.
 
+    Parameters:
+        folder_path (str): 엑셀 파일을 찾을 폴더의 경로.
+        file_pattern (str): 찾을 파일명 패턴.
 
-    ### 초기 데이터 가공
+    Returns:
+        tuple: 최신 엑셀 파일의 경로와 NFC 형태로 정규화된 파일명.
+    """
+    files = glob.glob(os.path.join(folder_path, file_pattern), recursive=True)
+
+    if files:
+        files.sort(key=os.path.getmtime, reverse=True)
+        latest_file_path = files[0]
+        latest_file_name = os.path.basename(latest_file_path)
+
+        # NFC 형태로 파일명 정규화
+        normalized_file_name = normalize_filename(latest_file_name)
+
+        return latest_file_path, normalized_file_name
+    else:
+        return None, None
+
+def get_df_from_password_excel(excelpath, password):
+    """
+    비밀번호가 설정된 엑셀 파일에서 데이터프레임을 반환합니다.
+
+    Parameters:
+        excelpath (str): 엑셀 파일 경로.
+        password (str): 엑셀 파일의 비밀번호.
+
+    Returns:
+        pandas.DataFrame: 비밀번호가 설정된 엑셀 파일의 데이터프레임.
+    """
+    df = pd.DataFrame()
+    temp = io.BytesIO()
+    with open(excelpath, 'rb') as f:
+        excel = msoffcrypto.OfficeFile(f)
+        excel.load_key(password)
+        excel.decrypt(temp)
+        df = pd.read_excel(temp)
+
+        # 모든 숫자 데이터를 텍스트로 변환하고 .0 제거
+        df = df.applymap(lambda x: str(x).rstrip('.0') if isinstance(x, (int, float)) else str(x))
         
-    df['선택'] = False  
-    df['메모'] = ''
-    df['쇼핑탭'] = "https://search.shopping.naver.com/search/all?where=all&frm=NVSCTAB&query=" + df['키워드']
+        del temp
+    return df
 
-    # '총검색수'와 '상품수' 열의 값을 정수로 변경
-    df['검색량'] = pd.to_numeric(df['검색량'], errors='coerce').fillna(0).astype(int)
-    df['상품수'] = pd.to_numeric(df['상품수'], errors='coerce').fillna(0).astype(int)
+# 사용 예시
+if __name__ == "__main__":
+    # 다운로드 폴더 경로 설정
+    download_folder_path = "/Users/chanhee/Downloads"
 
+    # 파일명 패턴 설정
+    file_pattern = '스마트스토어_**주문발주발송관리_*'
 
+    # 최신 엑셀 파일 정보 얻기
+    latest_file_path, normalized_file_name = get_latest_excel_info(download_folder_path, file_pattern)
 
-    ### 1번 데이터프레임
+    # 최신 파일 정보 출력 또는 변수에 담기
+    if latest_file_path:
+        print("가장 최근 엑셀 파일 (NFC 형태):", normalized_file_name)
 
-    edited_df = st.data_editor(
-        df,
-        hide_index=True,
-        #use_container_width=True,
-        column_order=("선택", "키워드", "검색량", "상품수", "경쟁률", "쇼핑탭"),
-        column_config={
-            "선택": st.column_config.CheckboxColumn(width="small"),
-            "키워드": st.column_config.TextColumn(width="medium"),
-            "쇼핑탭": st.column_config.LinkColumn(display_text="쇼핑탭"),
-            },  
-        )
+        # 엑셀 파일 비밀번호 설정
+        excel_password = '1111'
 
-
-    # 2번 데이터 프레임
-    selected_data = edited_df[edited_df["선택"]]
-    st.caption(f"선택된 키워드: {selected_data.shape[0]}")
-    st.data_editor(
-        selected_data,
-        hide_index=True,
-        #use_container_width=True,
-        column_order=("키워드", "검색량", "상품수", "경쟁률", "쇼핑탭","메모"),
-        column_config={
-            "키워드": st.column_config.TextColumn(width=""),
-            "쇼핑탭": st.column_config.LinkColumn(display_text="쇼핑탭"),
-            "메모" : st.column_config.TextColumn(width="medium")
-            },  
-        )
+        # 데이터프레임 얻기
+        df = get_df_from_password_excel(latest_file_path, excel_password)
 
 
-    # 선택된 키워드
-    selected_keyword = st.multiselect(
-        '',
-        selected_data['키워드'].tolist(),
-        selected_data['키워드'].tolist())
+# '주문번호'를 int64로 변환
+df['주문번호'] = pd.to_numeric(df['주문번호'], errors='coerce').fillna(0).astype(int)
 
-    # 키워드 입력란
-    keyword_input = st.text_input("")
+# zentrade_df와 smartstore_df 병합
+merged_df = pd.merge(smartstore_df, df, how='inner', left_on='주문번호', right_on='주문번호', suffixes=('_스마트스토어', '_젠트레이드'))
 
-    # 글자수 표시
-    character_count = len(keyword_input)
-    st.caption(f"상품명길이: {character_count}")
+# 필요한 열만 선택
+result_df = merged_df[['주문번호_스마트스토어', '송장번호_젠트레이드']]
 
+# 결과 데이터프레임을 엑셀로 저장
+output_excel_path = '/Users/chanhee/Desktop/lch/python/result_output.xlsx'
+result_df.to_excel(output_excel_path, index=False)
 
+print(f"결과가 {output_excel_path}로 저장되었습니다.")
+
+# 추가 코드: merged_df를 엑셀 파일로 저장
+merged_excel_path = '/Users/chanhee/Desktop/lch/python/merged_output.xlsx'
+merged_df.to_excel(merged_excel_path, index=False)
+print(f"Merged 결과가 {merged_excel_path}로 저장되었습니다.")
